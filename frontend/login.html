@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chess Online - Connexion</title>
+<style>
+body {
+  margin: 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+.container {
+  background: white;
+  padding: 40px;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+  width: 100%;
+  max-width: 400px;
+}
+h1 {
+  text-align: center;
+  color: #333;
+  margin-bottom: 30px;
+}
+input {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 15px;
+  border: 2px solid #ddd;
+  border-radius: 6px;
+  font-size: 16px;
+  box-sizing: border-box;
+}
+input:focus {
+  outline: none;
+  border-color: #667eea;
+}
+button {
+  width: 100%;
+  padding: 12px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+button:hover {
+  background: #5568d3;
+}
+.link {
+  text-align: center;
+  margin-top: 20px;
+  color: #666;
+}
+.link a {
+  color: #667eea;
+  text-decoration: none;
+}
+.error {
+  color: red;
+  font-size: 14px;
+  margin-bottom: 10px;
+  text-align: center;
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>♔ Chess Online</h1>
+  <div id="error" class="error"></div>
+  <input type="text" id="username" placeholder="Nom d'utilisateur" autocomplete="username">
+  <input type="password" id="password" placeholder="Mot de passe" autocomplete="current-password">
+  <button onclick="login()">Se connecter</button>
+  <div class="link">
+    Pas de compte ? <a href="register.html">S'inscrire</a>
+  </div>
+</div>
+
+<script>
+const API_URL = 'https://your-render-app.onrender.com';
+
+function showError(msg) {
+  document.getElementById('error').textContent = msg;
+}
+
+async function login() {
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value;
+
+  if (!username || !password) {
+    showError('Tous les champs sont requis');
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_URL}/api/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      showError(data.error || 'Erreur de connexion');
+      return;
+    }
+
+    localStorage.setItem('token', data.token);
+    localStorage.setItem('userId', data.userId);
+    localStorage.setItem('username', data.username);
+    window.location.href = 'lobby.html';
+  } catch (error) {
+    showError('Erreur réseau');
+  }
+}
+
+document.getElementById('password').addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') login();
+});
+</script>
+</body>
+</html>

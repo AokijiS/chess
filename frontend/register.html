@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chess Online - Inscription</title>
+<style>
+body {
+  margin: 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+.container {
+  background: white;
+  padding: 40px;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+  width: 100%;
+  max-width: 400px;
+}
+h1 {
+  text-align: center;
+  color: #333;
+  margin-bottom: 30px;
+}
+input {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 15px;
+  border: 2px solid #ddd;
+  border-radius: 6px;
+  font-size: 16px;
+  box-sizing: border-box;
+}
+input:focus {
+  outline: none;
+  border-color: #667eea;
+}
+button {
+  width: 100%;
+  padding: 12px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+button:hover {
+  background: #5568d3;
+}
+.link {
+  text-align: center;
+  margin-top: 20px;
+  color: #666;
+}
+.link a {
+  color: #667eea;
+  text-decoration: none;
+}
+.error {
+  color: red;
+  font-size: 14px;
+  margin-bottom: 10px;
+  text-align: center;
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>♔ Inscription</h1>
+  <div id="error" class="error"></div>
+  <input type="text" id="username" placeholder="Nom d'utilisateur" autocomplete="username">
+  <input type="password" id="password" placeholder="Mot de passe" autocomplete="new-password">
+  <input type="password" id="confirmPassword" placeholder="Confirmer le mot de passe" autocomplete="new-password">
+  <button onclick="register()">S'inscrire</button>
+  <div class="link">
+    Déjà un compte ? <a href="login.html">Se connecter</a>
+  </div>
+</div>
+
+<script>
+const API_URL = 'https://your-render-app.onrender.com';
+
+function showError(msg) {
+  document.getElementById('error').textContent = msg;
+}
+
+async function register() {
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value;
+  const confirmPassword = document.getElementById('confirmPassword').value;
+
+  if (!username || !password || !confirmPassword) {
+    showError('Tous les champs sont requis');
+    return;
+  }
+
+  if (password !== confirmPassword) {
+    showError('Les mots de passe ne correspondent pas');
+    return;
+  }
+
+  if (password.length < 6) {
+    showError('Le mot de passe doit contenir au moins 6 caractères');
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_URL}/api/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      showError(data.error || 'Erreur d\'inscription');
+      return;
+    }
+
+    alert('Inscription réussie ! Vous pouvez maintenant vous connecter.');
+    window.location.href = 'login.html';
+  } catch (error) {
+    showError('Erreur réseau');
+  }
+}
+</script>
+</body>
+</html>

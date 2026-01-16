@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chess Online - Lobby</title>
+<script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
+<style>
+body {
+  margin: 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: white;
+  padding: 20px;
+}
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+h1 { margin: 0; }
+button {
+  padding: 10px 20px;
+  background: white;
+  color: #667eea;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+}
+.section {
+  background: white;
+  color: #333;
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+.friend-list, .request-list, .invitation-list {
+  max-height: 200px;
+  overflow-y: auto;
+}
+.item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+}
+.online {
+  color: #10b981;
+  font-weight: bold;
+}
+.offline {
+  color: #999;
+}
+input {
+  width: 60%;
+  padding: 8px;
+  border: 2px solid #ddd;
+  border-radius: 6px;
+}
+.btn {
+  padding: 6px 12px;
+  margin-left: 5px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.btn-success { background: #10b981; }
+.btn-danger { background: #ef4444; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>♔ Chess Lobby</h1>
+    <div>
+      <span id="username"></span>
+      <button onclick="logout()">Déconnexion</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Créer/Rejoindre une partie</h2>
+    <button onclick="createGame()">Créer une partie</button>
+    <input type="text" id="joinCode" placeholder="Code de partie">
+    <button onclick="joinGame()">Rejoindre</button>
+  </div>
+
+  <div class="section">
+    <h2>Mes amis</h2>
+    <input type="text" id="friendUsername" placeholder="Nom d'utilisateur">
+    <button class="btn" onclick="addFriend()">Ajouter</button>
+    <div class="friend-list" id="friendsList"></div>
+  </div>
+
+  <div class="section">
+    <h2>Demandes d'amis</h2>
+    <div class="request-list" id="requestsList"></div>
+  </div>
+
+  <div class="section">
+    <h2>Invitations de jeu</h2>
+    <div class="invitation-list" id="invitationsList"></div>
+  </div>
+</div>
+
+<script>
+const API_URL = 'https://your-render-app.onrender.com';
+const token = localStorage.getItem('token');
+const username = localStorage.getItem('username');
+
+if (!token) {
+  window.location.href = 'login.html';
+}
+
+document.getElementById('username').textContent = username;
+
+const socket = io(API_URL);
+
+socket.on('connect', () => {
+  socket.emit('authenticate', { token });
+  socket.emit('getFriends');
+  socket.emit('getFriendRequests');
+  socket.emit('getInvitations');
+});
+
+socket.on('friendsList', (friends) => {
+  const list = document.getElementById('friendsList');
+  list.innerHTML = friends.map(f => `
+    <div class="item">
+      <span class="${f.online ? 'online' : 'offline'}">${f.username} ${f.online ? '🟢' : '⚫'}</span>
+      ${f.online ? `<button class="btn btn-success" onclick="inviteFriend(${f.id})">Inviter</button>` : ''}
+    </div>
+  `).join('') || '<p>Aucun ami</p>';
+});
+
+socket.on('friendRequests', (requests) => {
+  const list = document.getElementById('requestsList');
+  list.innerHTML = requests.map(r => `
+    <div class="item">
+      <span>${r.username}</span>
+      <div>
+        <button class="btn btn-success" onclick="acceptRequest(${r.id})">Accepter</button>
+        <button class="btn btn-danger" onclick="rejectRequest(${r.id})">Refuser</button>
+      </div>
+    </div>
+  `).join('') || '<p>Aucune demande</p>';
+});
+
+socket.on('invitationsList', (invitations) => {
+  const list = document.getElementById('invitationsList');
+  list.innerHTML = invitations.map(i => `
+    <div class="item">
+      <span>${i.fromUsername} vous invite à jouer</span>
+      <button class="btn btn-success" onclick="acceptInvitation('${i.gameCode}')">Accepter</button>
+    </div>
+  `).join('') || '<p>Aucune invitation</p>';
+});
+
+socket.on('gameCreated', ({ gameCode }) => {
+  localStorage.setItem('gameCode', gameCode);
+  localStorage.setItem('color', 'white');
+  window.location.href = 'game.html';
+});
+
+socket.on('gameJoined', ({ gameCode, color }) => {
+  localStorage.setItem('gameCode', gameCode);
+  localStorage.setItem('color', color);
+  window.location.href = 'game.html';
+});
+
+socket.on('gameInvitation', ({ from, gameCode }) => {
+  alert(`${from} vous invite à jouer !`);
+  socket.emit('getInvitations');
+});
+
+socket.on('friendRequest', ({ from }) => {
+  alert(`${from} vous a envoyé une demande d'ami`);
+  socket.emit('getFriendRequests');
+});
+
+socket.on('error', ({ message }) => {
+  alert(message);
+});
+
+function createGame() {
+  socket.emit('createGame');
+}
+
+function joinGame() {
+  const code = document.getElementById('joinCode').value.trim();
+  if (!code) return alert('Entrez un code');
+  socket.emit('joinGame', { gameCode: code });
+}
+
+function addFriend() {
+  const friendUsername = document.getElementById('friendUsername').value.trim();
+  if (!friendUsername) return alert('Entrez un nom d\'utilisateur');
+  socket.emit('addFriend', { username: friendUsername });
+  document.getElementById('friendUsername').value = '';
+}
+
+function acceptRequest(requestId) {
+  socket.emit('acceptFriendRequest', { requestId });
+  setTimeout(() => {
+    socket.emit('getFriendRequests');
+    socket.emit('getFriends');
+  }, 500);
+}
+
+function rejectRequest(requestId) {
+  socket.emit('rejectFriendRequest', { requestId });
+  setTimeout(() => socket.emit('getFriendRequests'), 500);
+}
+
+function inviteFriend(friendId) {
+  socket.emit('inviteFriend', { friendId });
+}
+
+function acceptInvitation(gameCode) {
+  socket.emit('acceptInvitation', { gameCode });
+}
+
+function logout() {
+  localStorage.clear();
+  window.location.href = 'login.html';
+}
+</script>
+</body>
+</html>
